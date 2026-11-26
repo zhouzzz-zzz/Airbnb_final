@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cover Scoring Tool · 66 Airbnb covers</title>
+<style>
+  :root {
+    --ink:#3B2A24; --body:#654B40; --muted:#8B7063;
+    --cream:#FFF6EC; --white:#FFFFFF; --orange:#D85A2B;
+    --teal:#0D9488; --amber:#C97706; --line:#E4D2C6;
+    --dark:#17232B; --peach:#E77D64;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; min-height:100vh; color:var(--ink);
+    font:15px/1.45 Arial, Helvetica, sans-serif;
+    background:
+      radial-gradient(circle at 92% 0%, #F8DED2 0, transparent 29%),
+      linear-gradient(145deg, #FFF9F3, var(--cream));
+  }
+  button { font:inherit; cursor:pointer; }
+  .page { max-width:1220px; margin:0 auto; padding:28px 28px 44px; }
+  header { display:flex; align-items:flex-end; justify-content:space-between; gap:24px; margin-bottom:22px; }
+  .eyebrow { margin:0 0 8px; color:var(--orange); font-size:11px; font-weight:700; letter-spacing:.12em; }
+  h1 { margin:0; max-width:760px; font-size:clamp(28px, 4vw, 44px); line-height:1.06; letter-spacing:-.035em; }
+  .sub { max-width:620px; margin:10px 0 0; color:var(--body); font-size:16px; }
+  .counter { min-width:164px; text-align:right; }
+  .counter strong { display:flex; align-items:baseline; justify-content:flex-end; gap:3px; font-size:28px; line-height:1; white-space:nowrap; }
+  .counter .slash { color:var(--orange); }
+  .counter span { display:block; margin-top:6px; color:var(--muted); font-size:11px; }
+  .bar { height:7px; overflow:hidden; margin-bottom:20px; border-radius:99px; background:#EADDD5; }
+  .bar i { display:block; height:100%; width:0; border-radius:inherit; background:var(--orange); transition:width .18s ease; }
+  .stage { display:grid; grid-template-columns:minmax(260px, 1fr) 320px; gap:20px; margin-bottom:20px; }
+  .preview, .instructions { border-radius:20px; background:rgba(255,255,255,.86); box-shadow:0 10px 35px rgba(59,42,36,.07); }
+  .preview { display:flex; min-height:324px; align-items:center; justify-content:center; padding:18px; }
+  .preview img { display:block; width:100%; height:286px; object-fit:cover; border-radius:14px; user-select:none; }
+  .preview .empty { color:var(--muted); font-size:17px; text-align:center; }
+  .instructions { padding:22px 24px; }
+  .instructions h2 { margin:0 0 8px; font-size:16px; }
+  .instructions p { margin:0 0 14px; color:var(--body); font-size:13px; }
+  .instructions ol { margin:0; padding-left:19px; color:var(--body); font-size:13px; }
+  .instructions li { margin-bottom:8px; }
+  .instructions kbd { padding:1px 6px; border:1px solid #D9C6B8; border-radius:4px; background:#FFF9F4; color:var(--ink); font:inherit; font-size:12px; }
+  .bins { display:grid; grid-template-columns:repeat(6, minmax(0, 1fr)); gap:10px; }
+  .bin {
+    min-height:238px; padding:10px; border:1.5px dashed #CCB9AD; border-radius:14px;
+    background:rgba(255,255,255,.67); transition:background .15s,border-color .15s,transform .15s;
+  }
+  .bin.drag-over { border-color:var(--orange); background:#FFF0E8; transform:translateY(-2px); }
+  .bin-head { display:flex; align-items:center; justify-content:space-between; padding:1px 2px 9px; border-bottom:1px solid var(--line); }
+  .bin-head b { color:var(--ink); font-size:14px; }
+  .bin-head span { color:var(--muted); font-size:10px; }
+  .items { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:9px; }
+  .thumb { position:relative; aspect-ratio:4/3; overflow:hidden; border-radius:6px; cursor:grab; }
+  .thumb img { width:100%; height:100%; display:block; object-fit:cover; }
+  .thumb em { position:absolute; left:3px; bottom:3px; padding:1px 4px; border-radius:3px; background:rgba(23,35,43,.76); color:white; font-size:9px; font-style:normal; }
+  .hint { display:flex; justify-content:space-between; gap:20px; margin-top:12px; color:var(--muted); font-size:11px; }
+  .hint button { padding:5px 12px; border:1px solid #D9C6B8; border-radius:7px; background:white; color:var(--body); }
+  .hint button:disabled { cursor:not-allowed; opacity:.42; }
+  .done { padding:38px 20px; text-align:center; }
+  .done strong { display:block; margin-bottom:8px; font-size:22px; }
+  .done span { color:var(--body); font-size:14px; }
+  .footer { display:flex; justify-content:space-between; gap:18px; margin-top:18px; color:var(--muted); font-size:10px; }
+  @media (max-width:900px) {
+    .stage { grid-template-columns:1fr; }
+    .bins { grid-template-columns:repeat(3, minmax(0,1fr)); }
+    .instructions { order:-1; }
+  }
+  @media (max-width:600px) {
+    .page { padding:20px 14px 32px; }
+    header { align-items:flex-start; flex-direction:column; }
+    .counter { text-align:left; }
+    .bins { grid-template-columns:repeat(2, minmax(0,1fr)); }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div>
+      <p class="eyebrow">MEASUREMENT TOOL  /  INTERACTIVE DEMO</p>
+      <h1>Score all 66 covers</h1>
+      <p class="sub">Drag each cover into a 1–6 box, or press 1–6. Review the full set, then export a clean CSV column.</p>
+    </div>
+    <div class="counter">
+      <strong><span id="done">0</span><span class="slash">/</span><span id="total">66</span></strong>
+      <span>COVERS SCORED</span>
+    </div>
+  </header>
+
+  <div class="bar"><i id="bar"></i></div>
+
+  <section class="stage">
+    <div class="preview" id="preview"></div>
+    <aside class="instructions">
+      <h2>How to use it</h2>
+      <p>Look once, then choose the box that matches the cover’s visual appeal.</p>
+      <ol>
+        <li>Drag the image into any <b>1–6</b> box.</li>
+        <li>Or press <kbd>1</kbd>–<kbd>6</kbd> to score immediately.</li>
+        <li>Drag between boxes to change a score; use Undo to go back.</li>
+        <li>When all covers are scored, export the result as CSV.</li>
+      </ol>
+      <p style="margin-top:14px"><b>Scale:</b> 1 = clearly weak · 3 = ordinary · 6 = very appealing and worth opening.</p>
+    </aside>
+  </section>
+
+  <section class="bins" id="bins" aria-label="Score bins"></section>
+
+  <div class="hint">
+    <span>Drag a thumbnail to another bin to change its score.</span>
+    <button id="undo" disabled>↩ Undo last</button>
+  </div>
+
+  <div class="footer">
+    <span>All 66 project covers are loaded below. Scores stay in this browser until you export.</span>
+    <button id="export" disabled style="padding:5px 12px;border:0;border-radius:7px;background:#17232B;color:white;">Export scores (CSV)</button>
+  </div>
+</div>
+
+<script>
+  const covers = [
+    { id:1, src:"assets/all_covers/02_v5.60_r4.94_n66.jpg", label:"cover 1" },
+    { id:2, src:"assets/all_covers/03_v4.80_r5_n8.jpg", label:"cover 2" },
+    { id:3, src:"assets/all_covers/04_v3.20_r4.93_n223.jpg", label:"cover 3" },
+    { id:4, src:"assets/all_covers/05_v3.20_r4.92_n113.jpg", label:"cover 4" },
+    { id:5, src:"assets/all_covers/06_v3.20_r4.86_n177.jpg", label:"cover 5" },
+    { id:6, src:"assets/all_covers/07_v2.80_r4.79_n63.jpg", label:"cover 6" },
+    { id:7, src:"assets/all_covers/08_v3.60_r4.67_n43.jpg", label:"cover 7" },
+    { id:8, src:"assets/all_covers/09_v5.80_r4.79_n108.jpg", label:"cover 8" },
+    { id:9, src:"assets/all_covers/10_v4.00_r4.92_n66.jpg", label:"cover 9" },
+    { id:10, src:"assets/all_covers/11_v4.20_r4.92_n39.jpg", label:"cover 10" },
+    { id:11, src:"assets/all_covers/12_v2.00_r4.98_n160.jpg", label:"cover 11" },
+    { id:12, src:"assets/all_covers/13_v4.40_r5_n12.jpg", label:"cover 12" },
+    { id:13, src:"assets/all_covers/14_v3.00_r4.94_n145.jpg", label:"cover 13" },
+    { id:14, src:"assets/all_covers/15_v2.20_r4.96_n81.jpg", label:"cover 14" },
+    { id:15, src:"assets/all_covers/16_v2.40_r4.92_n173.jpg", label:"cover 15" },
+    { id:16, src:"assets/all_covers/17_v2.20_r4.75_n36.jpg", label:"cover 16" },
+    { id:17, src:"assets/all_covers/18_v3.80_r4.68_n405.jpg", label:"cover 17" },
+    { id:18, src:"assets/all_covers/19_v3.60_r4.57_n133.jpg", label:"cover 18" },
+    { id:19, src:"assets/all_covers/20_v3.40_r4.54_n26.jpg", label:"cover 19" },
+    { id:20, src:"assets/all_covers/21_v2.20_r4.89_n241.jpg", label:"cover 20" },
+    { id:21, src:"assets/all_covers/22_v2.00_r4.85_n33.jpg", label:"cover 21" },
+    { id:22, src:"assets/all_covers/23_v4.00_r4.6_n30.jpg", label:"cover 22" },
+    { id:23, src:"assets/all_covers/24_v3.80_r4.76_n25.jpg", label:"cover 23" },
+    { id:24, src:"assets/all_covers/25_v2.20_r4.82_n22.jpg", label:"cover 24" },
+    { id:25, src:"assets/all_covers/26_v3.00_r4.9_n10.jpg", label:"cover 25" },
+    { id:26, src:"assets/all_covers/27_v4.20_r4.52_n29.jpg", label:"cover 26" },
+    { id:27, src:"assets/all_covers/28_v2.80_r4.6_n210.jpg", label:"cover 27" },
+    { id:28, src:"assets/all_covers/29_v3.80_r4.58_n24.jpg", label:"cover 28" },
+    { id:29, src:"assets/all_covers/30_v3.80_r4.53_n30.jpg", label:"cover 29" },
+    { id:30, src:"assets/all_covers/31_v4.00_r5_n9.jpg", label:"cover 30" },
+    { id:31, src:"assets/all_covers/32_v2.60_r4.72_n115.jpg", label:"cover 31" },
+    { id:32, src:"assets/all_covers/33_v1.60_r4.84_n193.jpg", label:"cover 32" },
+    { id:33, src:"assets/all_covers/34_v5.60_r4.85_n55.jpg", label:"cover 33" },
+    { id:34, src:"assets/all_covers/35_v4.60_r4.67_n15.jpg", label:"cover 34" },
+    { id:35, src:"assets/all_covers/36_v2.80_r4.8_n179.jpg", label:"cover 35" },
+    { id:36, src:"assets/all_covers/37_v1.40_r5_n12.jpg", label:"cover 36" },
+    { id:37, src:"assets/all_covers/38_v3.80_r4.75_n321.jpg", label:"cover 37" },
+    { id:38, src:"assets/all_covers/39_v1.80_r4.51_n115.jpg", label:"cover 38" },
+    { id:39, src:"assets/all_covers/40_v3.20_r4.62_n29.jpg", label:"cover 39" },
+    { id:40, src:"assets/all_covers/41_v2.80_r4.73_n168.jpg", label:"cover 40" },
+    { id:41, src:"assets/all_covers/42_v5.40_r4.86_n36.jpg", label:"cover 41" },
+    { id:42, src:"assets/all_covers/43_v3.40_r5_n3.jpg", label:"cover 42" },
+    { id:43, src:"assets/all_covers/44_v1.80_r4.55_n110.jpg", label:"cover 43" },
+    { id:44, src:"assets/all_covers/45_v2.80_r4.67_n24.jpg", label:"cover 44" },
+    { id:45, src:"assets/all_covers/46_v2.20_r4.78_n184.jpg", label:"cover 45" },
+    { id:46, src:"assets/all_covers/47_v2.80_r4.68_n160.jpg", label:"cover 46" },
+    { id:47, src:"assets/all_covers/48_v3.80_r4.58_n205.jpg", label:"cover 47" },
+    { id:48, src:"assets/all_covers/49_v1.60_r4.68_n57.jpg", label:"cover 48" },
+    { id:49, src:"assets/all_covers/50_v2.20_r4.48_n75.jpg", label:"cover 49" },
+    { id:50, src:"assets/all_covers/51_v2.40_r4.87_n247.jpg", label:"cover 50" },
+    { id:51, src:"assets/all_covers/52_v4.60_r4.65_n71.jpg", label:"cover 51" },
+    { id:52, src:"assets/all_covers/53_v3.80_r4.76_n33.jpg", label:"cover 52" },
+    { id:53, src:"assets/all_covers/54_v5.00_r4.78_n32.jpg", label:"cover 53" },
+    { id:54, src:"assets/all_covers/55_v3.60_r4.7_n20.jpg", label:"cover 54" },
+    { id:55, src:"assets/all_covers/56_v2.20_r4.77_n141.jpg", label:"cover 55" },
+    { id:56, src:"assets/all_covers/57_v1.00_r4.81_n72.jpg", label:"cover 56" },
+    { id:57, src:"assets/all_covers/58_v3.00_r4.69_n81.jpg", label:"cover 57" },
+    { id:58, src:"assets/all_covers/59_v3.20_r4.7_n92.jpg", label:"cover 58" },
+    { id:59, src:"assets/all_covers/60_v2.40_r4.68_n63.jpg", label:"cover 59" },
+    { id:60, src:"assets/all_covers/61_v2.40_r4.72_n75.jpg", label:"cover 60" },
+    { id:61, src:"assets/all_covers/62_v3.00_r4.65_n26.jpg", label:"cover 61" },
+    { id:62, src:"assets/all_covers/63_v2.40_r4.7_n132.jpg", label:"cover 62" },
+    { id:63, src:"assets/all_covers/64_v4.80_rNone_nNone.jpg", label:"cover 63" },
+    { id:64, src:"assets/all_covers/65_v2.60_r4.56_n18.jpg", label:"cover 64" },
+    { id:65, src:"assets/all_covers/66_v4.00_r4.48_n48.jpg", label:"cover 65" },
+    { id:66, src:"assets/all_covers/67_v2.80_r4.63_n8.jpg", label:"cover 66" },
+  ];
+  let scores = Object.fromEntries(covers.map(c => [c.id, null]));
+  const history = [];
+  let dragId = null;
+
+  const binsEl = document.getElementById("bins");
+  const previewEl = document.getElementById("preview");
+  const undoBtn = document.getElementById("undo");
+  const exportBtn = document.getElementById("export");
+
+  function completed() { return covers.filter(c => scores[c.id] !== null).length; }
+  function nextCover() { return covers.find(c => scores[c.id] === null); }
+
+  function render() {
+    const done = completed();
+    document.getElementById("done").textContent = done;
+    document.getElementById("bar").style.width = `${(done / covers.length) * 100}%`;
+    undoBtn.disabled = history.length === 0;
+    exportBtn.disabled = done !== covers.length;
+
+    const next = nextCover();
+    previewEl.innerHTML = next
+      ? `<img draggable="true" data-id="${next.id}" src="${next.src}" alt="Cover ${next.id}: ${next.label}">`
+      : `<div class="empty"><strong>All ${covers.length} covers scored.</strong><br>Drag any thumbnail to revise its score, or use Undo to return to the last cover.</div>`;
+    const img = previewEl.querySelector("img");
+    if (img) {
+      img.addEventListener("dragstart", event => {
+        dragId = Number(img.dataset.id);
+        event.dataTransfer.setData("text/plain", String(dragId));
+      });
+    }
+
+    binsEl.innerHTML = "";
+    for (let score = 1; score <= 6; score++) {
+      const bin = document.createElement("div");
+      bin.className = "bin";
+      bin.dataset.score = String(score);
+      const inBin = covers.filter(c => scores[c.id] === score);
+      bin.innerHTML = `<div class="bin-head"><b>${score} 分</b><span>${inBin.length} 張</span></div><div class="items"></div>`;
+      const items = bin.querySelector(".items");
+
+      inBin.forEach(cover => {
+        const thumb = document.createElement("div");
+        thumb.className = "thumb";
+        thumb.draggable = true;
+        thumb.title = `Cover #${cover.id} · drag to another bin`;
+        thumb.innerHTML = `<img src="${cover.src}" alt="Cover ${cover.id}"><em>#${cover.id}</em>`;
+        thumb.addEventListener("dragstart", event => {
+          dragId = cover.id;
+          event.dataTransfer.setData("text/plain", String(cover.id));
+        });
+        items.appendChild(thumb);
+      });
+
+      bin.addEventListener("dragover", event => {
+        event.preventDefault();
+        bin.classList.add("drag-over");
+      });
+      bin.addEventListener("dragleave", () => bin.classList.remove("drag-over"));
+      bin.addEventListener("drop", event => {
+        event.preventDefault();
+        bin.classList.remove("drag-over");
+        const raw = event.dataTransfer.getData("text/plain");
+        const id = Number(raw || dragId);
+        if (!(id in scores)) return;
+        if (scores[id] === score) { dragId = null; return; }
+        history.push({ id, prev: scores[id] });
+        scores[id] = score;
+        localStorage.setItem("airbnb_cover_scores_v1", JSON.stringify(scores));
+        dragId = null;
+        render();
+      });
+
+      binsEl.appendChild(bin);
+    }
+  }
+
+  document.addEventListener("keydown", event => {
+    if (!["1","2","3","4","5","6"].includes(event.key)) return;
+    const cover = nextCover();
+    if (!cover) return;
+    history.push({ id:cover.id, prev:scores[cover.id] });
+    scores[cover.id] = Number(event.key);
+    localStorage.setItem("airbnb_cover_scores_v1", JSON.stringify(scores));
+    render();
+  });
+
+  undoBtn.addEventListener("click", () => {
+    const last = history.pop();
+    if (!last) return;
+    scores[last.id] = last.prev;
+    localStorage.setItem("airbnb_cover_scores_v1", JSON.stringify(scores));
+    render();
+  });
+
+  exportBtn.addEventListener("click", () => {
+    const rows = [["id", "cover", "score_1_to_6"], ...covers.map(c => [c.id, c.label, scores[c.id]])];
+    const csv = rows.map(row => row.map(value => `"${String(value).replaceAll('"','""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type:"text/csv;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "airbnb_visual_appeal_scores.csv";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(link.href);
+  });
+
+  function loadSaved() {
+    try {
+      const saved = JSON.parse(localStorage.getItem("airbnb_cover_scores_v1") || "{}");
+      for (const cover of covers) {
+        const value = Number(saved[cover.id]);
+        scores[cover.id] = value >= 1 && value <= 6 ? value : null;
+      }
+    } catch (_) {}
+  }
+  loadSaved();
+  render();
+</script>
+</body>
+</html>
